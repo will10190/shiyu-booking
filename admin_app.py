@@ -16,6 +16,7 @@ st.markdown("""
     #MainMenu {visibility: hidden;} footer {visibility: hidden;} header {visibility: hidden;}
     h1, h2, h3, p, span { color: #5C4B41 !important; }
     .brand-title { text-align: center; font-size: 28px; font-weight: 700; color: #7A6353 !important; margin-top: 10px; margin-bottom: 20px; }
+    
     .booking-card { background-color: #FFFFFF; border-radius: 15px; padding: 20px 24px; margin-top: 15px; margin-bottom: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); border: 1px solid #F0EBE1; }
     .booking-card h4 { margin: 0 0 10px 0; color: #5C4B41 !important; font-size: 17px; }
     .booking-card h2 { margin: 0 0 12px 0; display: flex; align-items: center; gap: 10px; font-size: 22px; }
@@ -24,11 +25,16 @@ st.markdown("""
     div.stButton > button { background-color: #EDE0D4; color: #5C4B41; border-radius: 10px; border: none; width: 100%; font-weight: 600; font-size: 14px; padding: 10px 6px; transition: all 0.2s; line-height: 1.5; }
     div.stButton > button:hover { background-color: #DCC8B4; }
     .action-panel { background-color: #FAF6F1; border-radius: 12px; padding: 16px 20px; margin-bottom: 16px; border: 1px solid #EAE0D5; }
-    .calendar-table { width: 100%; border-collapse: collapse; background-color: white; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.05); table-layout: fixed; }
-    .calendar-table th { background-color: #FAF6F1; color: #7A6353; padding: 10px; text-align: center; border: 1px solid #F0EBE1; font-weight: 600; font-size: 13px; }
-    .calendar-table td { border: 1px solid #F0EBE1; height: 130px; vertical-align: top; padding: 4px; position: relative; }
-    .calendar-day-num { font-weight: bold; color: #5C4B41; margin-bottom: 5px; font-size: 12px; padding-left: 2px; }
-    .calendar-other-month { background-color: #F9F9F9; color: #CCC; }
+    
+    /* 🌟 核心修復：強制加上 !important 與 table-cell 鎖死網格，抵抗雲端的響應式干擾 */
+    .calendar-table { width: 100% !important; border-collapse: collapse !important; background-color: white !important; border-radius: 10px !important; overflow: hidden !important; box-shadow: 0 2px 8px rgba(0,0,0,0.05) !important; table-layout: fixed !important; display: table !important; }
+    .calendar-table tbody { display: table-row-group !important; }
+    .calendar-table tr { display: table-row !important; }
+    .calendar-table th { display: table-cell !important; width: 14.28% !important; background-color: #FAF6F1 !important; color: #7A6353 !important; padding: 10px !important; text-align: center !important; border: 1px solid #F0EBE1 !important; font-weight: 600 !important; font-size: 13px !important; }
+    .calendar-table td { display: table-cell !important; width: 14.28% !important; border: 1px solid #F0EBE1 !important; height: 130px !important; vertical-align: top !important; padding: 4px !important; position: relative !important; }
+    .calendar-day-num { font-weight: bold !important; color: #5C4B41 !important; margin-bottom: 5px !important; font-size: 12px !important; padding-left: 2px !important; }
+    .calendar-other-month { background-color: #F9F9F9 !important; color: #CCC !important; }
+    
     .cal-event { background-color: #E6D5C3; color: #5C4B41; font-size: 10px; padding: 3px 5px; border-radius: 4px; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-left: 3px solid #C4A484; line-height: 1.2; }
     .cal-event-off { background-color: #E2E2E2; color: #666; border-left: 3px solid #999; } 
     .cal-scroll { max-height: 105px; overflow-y: auto; scrollbar-width: none; }
@@ -44,14 +50,12 @@ if not st.session_state.admin_auth:
     with col_l2:
         pwd = st.text_input("密碼", type="password", placeholder="請輸入密碼", label_visibility="collapsed")
         if st.button("登入"):
-            # 🌟 核心修改：密碼改從 Streamlit 雲端保險箱讀取
             if pwd == st.secrets["admin_password"]:
-                st.session_state.admin_auth = True
-                st.rerun()
+                st.session_state.admin_auth = True; st.rerun()
             else: st.error("❌ 密碼錯誤")
     st.stop()
 
-# --- 3. 連接 Google Sheets (雲端安全版) ---
+# --- 3. 連接 Google Sheets ---
 try:
     scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
     creds_dict = json.loads(st.secrets["gcp_service_account"])
