@@ -22,11 +22,13 @@ st.markdown("""
     .booking-card h2 { margin: 0 0 12px 0; display: flex; align-items: center; gap: 10px; font-size: 22px; }
     .booking-card p  { margin: 4px 0; font-size: 15px; }
     .status-pill { font-size: 13px; background-color: #EAE0D5; color: #5C4B41; padding: 3px 12px; border-radius: 20px; font-weight: normal; }
-    div.stButton > button { background-color: #EDE0D4; color: #5C4B41; border-radius: 10px; border: none; width: 100%; font-weight: 600; font-size: 14px; padding: 10px 6px; transition: all 0.2s; line-height: 1.5; }
-    div.stButton > button:hover { background-color: #DCC8B4; }
+    
+    /* 🌟 優化按鈕樣式，確保在手機上是 100% 滿版 */
+    div.stButton > button { background-color: #EDE0D4 !important; color: #5C4B41 !important; border-radius: 10px !important; border: none !important; width: 100% !important; font-weight: 600 !important; font-size: 15px !important; padding: 12px 6px !important; transition: all 0.2s !important; }
+    div.stButton > button:hover { background-color: #DCC8B4 !important; }
+    
     .action-panel { background-color: #FAF6F1; border-radius: 12px; padding: 16px 20px; margin-bottom: 16px; border: 1px solid #EAE0D5; }
     
-    /* 🌟 終極修復：完全捨棄 table，改用 CSS Grid 確保永遠是 7 欄佈局 */
     .cal-container { width: 100%; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.05); background-color: white; border: 1px solid #F0EBE1; }
     .cal-header { display: grid; grid-template-columns: repeat(7, 1fr); background-color: #FAF6F1; border-bottom: 1px solid #F0EBE1; }
     .cal-header-cell { padding: 10px; text-align: center; color: #7A6353; font-weight: 600; font-size: 13px; border-right: 1px solid #F0EBE1; }
@@ -53,7 +55,7 @@ if not st.session_state.admin_auth:
     col_l1, col_l2, col_l3 = st.columns([1, 2, 1])
     with col_l2:
         pwd = st.text_input("密碼", type="password", placeholder="請輸入密碼", label_visibility="collapsed")
-        if st.button("登入"):
+        if st.button("登入", use_container_width=True):
             if pwd == st.secrets["admin_password"]:
                 st.session_state.admin_auth = True; st.rerun()
             else: st.error("❌ 密碼錯誤")
@@ -109,7 +111,7 @@ with st.expander("🏖️ 新增排休 / 鎖定時段", expanded=False):
         else:
             off_times = time_slots 
             st.info("已選擇全天，所有時段將被鎖定。")
-    if st.button("確認新增排休", type="primary"):
+    if st.button("確認新增排休", use_container_width=True):
         if not off_times: st.warning("請至少選擇一個時段。")
         else:
             sheet_bookings.append_row([str(date.today()), str(off_date), "'" + ", ".join(off_times), "[店休/排休]", "系統排休", "", "Christine", "店休", 0, "已排休", ""])
@@ -138,7 +140,6 @@ with col_m3:
 cal = calendar.Calendar(firstweekday=6) 
 month_days = cal.monthdatescalendar(st.session_state.cal_year, st.session_state.cal_month)
 
-# 🌟 改用 div 畫表格
 html_cal = "<div class='cal-container'><div class='cal-header'>"
 for day_name in ["日", "一", "二", "三", "四", "五", "六"]:
     html_cal += f"<div class='cal-header-cell'>{day_name}</div>"
@@ -185,19 +186,21 @@ else:
         
         if row['Name'] == "[店休/排休]":
             st.markdown(f'<div class="booking-card" style="background-color: #F5F5F5; border: 1px dashed #CCC;"><h4>🚫 {display_time} | 系統排休</h4><h2>[店休 / 鎖定時段]</h2></div>', unsafe_allow_html=True)
-            if st.button("🗑️ 刪除排休", key=f"del_off_{uid}"):
+            if st.button("🗑️ 刪除排休", key=f"del_off_{uid}", use_container_width=True):
                 sheet_bookings.delete_rows(real_row); st.success("已解除鎖定"); st.rerun()
         else:
             st.markdown(f'<div class="booking-card"><h4>{display_time} | {row["Staff"]}</h4><h2>{row["Name"]} <span class="status-pill">{row["Status"]}</span></h2><p>📋 項目：{row["Service"]}</p><p>📞 {clean_phone} | LINE：{row.get("LineID","—")}</p>{cust_note_html}<p>{paid_icon} {"已付款" if str(row.get("Paid","0"))=="1" else "未付款"}</p></div>', unsafe_allow_html=True)
+            
+            # 🌟 核心修復：加上 use_container_width=True，讓按鈕在手機上變成滿版的好點擊設計
             col1, col2, col3, col4 = st.columns(4)
             with col1:
-                if st.button("💰 計價", key=f"price_{uid}"): st.session_state.active_panel = ("price", uid); st.rerun()
+                if st.button("💰 計價", key=f"price_{uid}", use_container_width=True): st.session_state.active_panel = ("price", uid); st.rerun()
             with col2:
-                if st.button("💬 提醒", key=f"remind_{uid}"): st.session_state.active_panel = ("remind", uid); st.rerun()
+                if st.button("💬 提醒", key=f"remind_{uid}", use_container_width=True): st.session_state.active_panel = ("remind", uid); st.rerun()
             with col3:
-                if st.button("⏱️ 改時", key=f"time_{uid}"): st.session_state.active_panel = ("time", uid); st.rerun()
+                if st.button("⏱️ 改時", key=f"time_{uid}", use_container_width=True): st.session_state.active_panel = ("time", uid); st.rerun()
             with col4:
-                if st.button("❌ 取消", key=f"cancel_{uid}"): st.session_state.active_panel = ("cancel", uid); st.rerun()
+                if st.button("❌ 取消", key=f"cancel_{uid}", use_container_width=True): st.session_state.active_panel = ("cancel", uid); st.rerun()
 
             panel = st.session_state.active_panel
             if panel == ("price", uid):
@@ -207,7 +210,7 @@ else:
                 amount = st.number_input("實收金額", value=suggested, key=f"amt_{uid}")
                 paid = st.checkbox("標記付款", value=(str(row.get('Paid','0'))=="1"), key=f"p_{uid}")
                 note = st.text_input("備註", value=str(row.get('Note','')), key=f"n_{uid}")
-                if st.button("✅ 儲存", key=f"s_p_{uid}"):
+                if st.button("✅ 儲存", key=f"s_p_{uid}", use_container_width=True):
                     sheet_bookings.update_cell(real_row, 9, "1" if paid else "0"); sheet_bookings.update_cell(real_row, 11, note)
                     st.session_state.active_panel = None; st.rerun()
                 st.markdown("</div>", unsafe_allow_html=True)
@@ -239,7 +242,7 @@ else:
                         
                 new_start = st.selectbox("新開始時段", options=["請選擇..."]+valid_starts, key=f"ns_{uid}") if valid_starts else None
                 if not valid_starts: st.warning("⚠️ 該日期已無足夠時段。")
-                if st.button("✅ 確認改時", key=f"st_{uid}"):
+                if st.button("✅ 確認改時", key=f"st_{uid}", use_container_width=True):
                     if valid_starts and new_start != "請選擇...":
                         start_idx = time_slots.index(new_start)
                         sheet_bookings.update_cell(real_row, 2, str(new_date))
@@ -250,6 +253,6 @@ else:
             if panel == ("cancel", uid):
                 st.markdown("<div class='action-panel'>", unsafe_allow_html=True)
                 st.write(f"確定取消 {row['Name']}？")
-                if st.button("🗑️ 確定取消", key=f"cc_{uid}"):
+                if st.button("🗑️ 確定取消", key=f"cc_{uid}", use_container_width=True):
                     sheet_bookings.delete_rows(real_row); st.session_state.active_panel = None; st.rerun()
                 st.markdown("</div>", unsafe_allow_html=True)
