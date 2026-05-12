@@ -26,18 +26,22 @@ st.markdown("""
     div.stButton > button:hover { background-color: #DCC8B4; }
     .action-panel { background-color: #FAF6F1; border-radius: 12px; padding: 16px 20px; margin-bottom: 16px; border: 1px solid #EAE0D5; }
     
-    /* 🌟 核心修復：強制加上 !important 與 table-cell 鎖死網格，抵抗雲端的響應式干擾 */
-    .calendar-table { width: 100% !important; border-collapse: collapse !important; background-color: white !important; border-radius: 10px !important; overflow: hidden !important; box-shadow: 0 2px 8px rgba(0,0,0,0.05) !important; table-layout: fixed !important; display: table !important; }
-    .calendar-table tbody { display: table-row-group !important; }
-    .calendar-table tr { display: table-row !important; }
-    .calendar-table th { display: table-cell !important; width: 14.28% !important; background-color: #FAF6F1 !important; color: #7A6353 !important; padding: 10px !important; text-align: center !important; border: 1px solid #F0EBE1 !important; font-weight: 600 !important; font-size: 13px !important; }
-    .calendar-table td { display: table-cell !important; width: 14.28% !important; border: 1px solid #F0EBE1 !important; height: 130px !important; vertical-align: top !important; padding: 4px !important; position: relative !important; }
-    .calendar-day-num { font-weight: bold !important; color: #5C4B41 !important; margin-bottom: 5px !important; font-size: 12px !important; padding-left: 2px !important; }
-    .calendar-other-month { background-color: #F9F9F9 !important; color: #CCC !important; }
+    /* 🌟 終極修復：完全捨棄 table，改用 CSS Grid 確保永遠是 7 欄佈局 */
+    .cal-container { width: 100%; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.05); background-color: white; border: 1px solid #F0EBE1; }
+    .cal-header { display: grid; grid-template-columns: repeat(7, 1fr); background-color: #FAF6F1; border-bottom: 1px solid #F0EBE1; }
+    .cal-header-cell { padding: 10px; text-align: center; color: #7A6353; font-weight: 600; font-size: 13px; border-right: 1px solid #F0EBE1; }
+    .cal-header-cell:last-child { border-right: none; }
+    .cal-row { display: grid; grid-template-columns: repeat(7, 1fr); border-bottom: 1px solid #F0EBE1; }
+    .cal-row:last-child { border-bottom: none; }
+    .cal-cell { height: 130px; padding: 4px; border-right: 1px solid #F0EBE1; display: flex; flex-direction: column; }
+    .cal-cell:last-child { border-right: none; }
     
-    .cal-event { background-color: #E6D5C3; color: #5C4B41; font-size: 10px; padding: 3px 5px; border-radius: 4px; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-left: 3px solid #C4A484; line-height: 1.2; }
+    .calendar-day-num { font-weight: bold; color: #5C4B41; margin-bottom: 5px; font-size: 12px; padding-left: 2px; }
+    .calendar-other-month { background-color: #F9F9F9; color: #CCC; }
+    
+    .cal-event { background-color: #E6D5C3; color: #5C4B41; font-size: 10px; padding: 3px 5px; border-radius: 4px; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-left: 3px solid #C4A484; line-height: 1.2; flex-shrink: 0; }
     .cal-event-off { background-color: #E2E2E2; color: #666; border-left: 3px solid #999; } 
-    .cal-scroll { max-height: 105px; overflow-y: auto; scrollbar-width: none; }
+    .cal-scroll { flex-grow: 1; overflow-y: auto; scrollbar-width: none; }
     .cal-scroll::-webkit-scrollbar { display: none; }
     </style>
 """, unsafe_allow_html=True)
@@ -113,7 +117,7 @@ with st.expander("🏖️ 新增排休 / 鎖定時段", expanded=False):
 
 st.write("---")
 
-# === 月曆總覽 ===
+# === 月曆總覽 (CSS Grid 版) ===
 st.markdown("### 📅 當月預約總覽")
 if "cal_year" not in st.session_state: st.session_state.cal_year = date.today().year
 if "cal_month" not in st.session_state: st.session_state.cal_month = date.today().month
@@ -133,13 +137,18 @@ with col_m3:
 
 cal = calendar.Calendar(firstweekday=6) 
 month_days = cal.monthdatescalendar(st.session_state.cal_year, st.session_state.cal_month)
-html_cal = "<table class='calendar-table'><tr><th>日</th><th>一</th><th>二</th><th>三</th><th>四</th><th>五</th><th>六</th></tr>"
+
+# 🌟 改用 div 畫表格
+html_cal = "<div class='cal-container'><div class='cal-header'>"
+for day_name in ["日", "一", "二", "三", "四", "五", "六"]:
+    html_cal += f"<div class='cal-header-cell'>{day_name}</div>"
+html_cal += "</div>"
 
 for week in month_days:
-    html_cal += "<tr>"
+    html_cal += "<div class='cal-row'>"
     for d in week:
         td_class = "" if d.month == st.session_state.cal_month else "calendar-other-month"
-        html_cal += f"<td class='{td_class}'><div class='calendar-day-num'>{d.day}</div><div class='cal-scroll'>"
+        html_cal += f"<div class='cal-cell {td_class}'><div class='calendar-day-num'>{d.day}</div><div class='cal-scroll'>"
         if not df.empty:
             day_bookings = df[df['Date'] == str(d)].sort_values(by=['Time'])
             for _, rb in day_bookings.iterrows():
@@ -152,8 +161,9 @@ for week in month_days:
                 else:
                     start_t = time_list[0] if time_list else ""
                     html_cal += f"<div class='cal-event' title='{b_svc}'>🤎 {start_t} {b_name}<br/><span style='font-size:9px; opacity:0.8;'>{b_svc}</span></div>"
-        html_cal += "</div></td></tr>"
-html_cal += "</table>"
+        html_cal += "</div></div>"
+    html_cal += "</div>"
+html_cal += "</div>"
 
 st.markdown(html_cal, unsafe_allow_html=True)
 st.write("---")
