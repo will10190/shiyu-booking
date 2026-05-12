@@ -10,7 +10,6 @@ import json
 # --- 1. 連接 Google Sheets (雲端安全版) ---
 try:
     scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
-    # 🌟 讀取雲端加密金鑰
     creds_dict = json.loads(st.secrets["gcp_service_account"])
     creds = Credentials.from_service_account_info(creds_dict, scopes=scope)
     
@@ -51,8 +50,7 @@ st.markdown(f"""
     h1, h2, h3, p, span, label {{ color: #5C4B41 !important; }}
     div.stButton > button {{ border-radius: 12px; width: 100%; transition: all 0.3s; font-weight: bold; }}
     div.stButton > button:disabled {{ background-color: #E2E2E2 !important; color: #AAAAAA !important; border: 1px solid #CCCCCC !important; opacity: 1 !important; text-decoration: line-through !important; }}
-    div.stButton > button[kind="primary"] {{ background-color: #E6D5C3 !important; color: #5C4B41 !important; border: none !important; padding: 12px !important; font-size: 18px !important; }}
-    div[data-testid="stColumn"] div.stButton > button[kind="primary"] {{ background-color: #C4A484 !important; color: #FFFFFF !important; border: 1px solid #C4A484 !important; box-shadow: none !important; }}
+    div.stButton > button[kind="primary"] {{ background-color: #C4A484 !important; color: #FFFFFF !important; border: 1px solid #C4A484 !important; box-shadow: none !important; }}
     div[data-testid="stColumn"] div.stButton > button[kind="secondary"] {{ background-color: #FDFBF7 !important; color: #7A6353 !important; border: 1px solid #EAE0D5 !important; }}
     </style>
 """, unsafe_allow_html=True)
@@ -79,7 +77,7 @@ with st.expander("📖 查看價目表 (展開)"):
 
 st.markdown("### 顧客資料")
 phone = st.text_input("聯絡電話", placeholder="09xxxxxxxx", key="phone_input")
-if st.button("🔍 自動查詢資料"):
+if st.button("🔍 自動查詢資料", use_container_width=True):
     input_phone = st.session_state.phone_input.strip()
     if input_phone:
         try:
@@ -155,21 +153,37 @@ except: pass
 time_slots = ["09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00"]
 if total_mins > 0: st.caption(f"💡 您選取的項目需約 {total_mins} 分鐘 (連續 {slots_needed} 個時段)")
 
-cols = st.columns(3)
 def select_start(t): st.session_state.selected_times = [t]
 
+# 🌟 核心防禦：先計算好所有的衝突，再來畫按鈕
 valid_slots = []
+conflicts = {}
 for i, t in enumerate(time_slots):
     conflict = False
     for j in range(slots_needed):
         if i + j >= len(time_slots) or time_slots[i+j] in booked_times:
             conflict = True
             break
+    conflicts[t] = conflict
     if not conflict: valid_slots.append(t)
-    
-    is_sel = (len(st.session_state.selected_times)>0 and t == st.session_state.selected_times[0])
-    with cols[i%3]:
-        st.button(t, key=f"t_{t}", disabled=conflict, type="primary" if is_sel else "secondary", on_click=select_start, args=(t,))
+
+# 🌟 核心防禦：改用「橫向一排一排產出」，讓手機垂直堆疊時維持時間順序
+for i in range(0, len(time_slots), 3):
+    cols = st.columns(3)
+    for j in range(3):
+        if i + j < len(time_slots):
+            t = time_slots[i + j]
+            is_sel = (len(st.session_state.selected_times) > 0 and t == st.session_state.selected_times[0])
+            with cols[j]:
+                st.button(
+                    t, 
+                    key=f"t_{t}", 
+                    disabled=conflicts[t], 
+                    type="primary" if is_sel else "secondary", 
+                    use_container_width=True, 
+                    on_click=select_start, 
+                    args=(t,)
+                )
 
 if st.session_state.selected_times and st.session_state.selected_times[0] not in valid_slots:
     st.session_state.selected_times = []
@@ -179,7 +193,7 @@ st.markdown("### 預約確認")
 c1 = st.checkbox("加入官方LINE收到預約通知", key="c1")
 c2 = st.checkbox("更改時間限1次，需3天前告知", key="c2")
 
-if st.button("送出確認預約", type="primary"):
+if st.button("送出確認預約", type="primary", use_container_width=True):
     if not name or not phone or not selected_services or not st.session_state.selected_times or not (c1 and c2):
         st.warning("⚠️ 請確認資料、服務項目、時段均已填寫並勾選同意事項。")
     else:
