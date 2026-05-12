@@ -44,8 +44,10 @@ if not st.session_state.admin_auth:
     with col_l2:
         pwd = st.text_input("密碼", type="password", placeholder="請輸入密碼", label_visibility="collapsed")
         if st.button("登入"):
-            if pwd == "1019":
-                st.session_state.admin_auth = True; st.rerun()
+            # 🌟 核心修改：密碼改從 Streamlit 雲端保險箱讀取
+            if pwd == st.secrets["admin_password"]:
+                st.session_state.admin_auth = True
+                st.rerun()
             else: st.error("❌ 密碼錯誤")
     st.stop()
 
