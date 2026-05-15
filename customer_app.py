@@ -132,14 +132,27 @@ try:
             price_db[item_name] = int(r.get('Price', 0))
 except: pass
 
+# 🌟 核心修改 1：改為除以 20 分鐘來計算所需格子
 total_mins = sum(duration_db.get(s, 60) for s in selected_services)
 total_price = sum(price_db.get(s, 0) for s in selected_services)
-slots_needed = math.ceil(total_mins / 60.0) if total_mins > 0 else 1
+slots_needed = math.ceil(total_mins / 20.0) if total_mins > 0 else 1
 
 st.markdown("### 選擇時間")
 booking_date = st.date_input("選擇日期", date.today(), label_visibility="collapsed")
 if str(booking_date) != st.session_state.current_date:
     st.session_state.current_date, st.session_state.selected_times = str(booking_date), []
+
+# 🌟 核心修改 2：動態產出 20 分鐘單位的時間表，並根據平假日決定打烊時間
+def get_time_slots(target_date):
+    is_weekend = target_date.weekday() >= 5
+    end_hour = 19 if is_weekend else 16
+    slots = []
+    for h in range(9, end_hour + 1):
+        for m in (0, 20, 40):
+            slots.append(f"{h:02d}:{m:02d}")
+    return slots
+
+time_slots = get_time_slots(booking_date)
 
 booked_times = []
 try:
@@ -150,12 +163,10 @@ try:
             booked_times.extend([t.strip() for t in clean_time_str.split(",")])
 except: pass
 
-time_slots = ["09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00"]
-if total_mins > 0: st.caption(f"💡 您選取的項目需約 {total_mins} 分鐘 (連續 {slots_needed} 個時段)")
+if total_mins > 0: st.caption(f"💡 您選取的項目需約 {total_mins} 分鐘 (需預留 {slots_needed} 個連續時段)")
 
 def select_start(t): st.session_state.selected_times = [t]
 
-# 🌟 核心防禦：先計算好所有的衝突，再來畫按鈕
 valid_slots = []
 conflicts = {}
 for i, t in enumerate(time_slots):
@@ -167,7 +178,7 @@ for i, t in enumerate(time_slots):
     conflicts[t] = conflict
     if not conflict: valid_slots.append(t)
 
-# 🌟 核心防禦：改用「橫向一排一排產出」，讓手機垂直堆疊時維持時間順序
+# 依序橫向排版：因為一小時有 00, 20, 40 三個時段，3 欄排版剛剛好等於一行一小時！
 for i in range(0, len(time_slots), 3):
     cols = st.columns(3)
     for j in range(3):
@@ -223,7 +234,7 @@ if st.button("送出確認預約", type="primary", use_container_width=True):
                 sheet_customers.update_cell(found_row_idx, 6, current_visits + 1)
         except: pass 
         
-        summary = f"【時嶼預約成功】\n姓名：{name}\n日期：{booking_date}\n時間：{final_times}\n項目：{', '.join(selected_services)}"
+        summary = f"【時嶼預約成功】\n姓名：{name}\n日期：{booking_date}\n時間：{final_times.split(',')[0]} (總時長 {total_mins} 分鐘)\n項目：{', '.join(selected_services)}"
         st.success("🎉 預約成功！內容已備妥。")
         st.code(summary, language=None)
         st.markdown(f'<a href="https://lin.ee/VPHMiO8" target="_blank"><button style="width:100%; background-color:#06C755; color:white; border:none; padding:12px; border-radius:10px; font-weight:bold;">點此跳轉官方 LINE (完成預約)</button></a>', unsafe_allow_html=True)
