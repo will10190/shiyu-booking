@@ -43,6 +43,8 @@ st.markdown("""
     .cal-event-off { background-color: #E2E2E2; color: #666; border-left: 3px solid #999; } 
     .cal-scroll { flex-grow: 1; overflow-y: auto; scrollbar-width: none; }
     .cal-scroll::-webkit-scrollbar { display: none; }
+    
+    .date-divider { margin-top: 25px; margin-bottom: 10px; padding-bottom: 5px; border-bottom: 2px solid #EAE0D5; color: #7A6353; font-weight: bold; font-size: 18px; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -92,7 +94,7 @@ except: pass
 if "active_panel" not in st.session_state: st.session_state.active_panel = None
 st.markdown("<div class='brand-title'>時嶼 管家後台</div>", unsafe_allow_html=True)
 
-# 🌟 後台通用時間產生器 (自動判斷平假日)
+# 🌟 核心：後台通用時間產生器 (自動判斷平假日、20分鐘為一格)
 def get_time_slots(target_date):
     is_weekend = getattr(target_date, 'weekday', lambda: 0)() >= 5
     end_hour = 19 if is_weekend else 16
@@ -113,7 +115,7 @@ with st.expander("🏖️ 新增排休 / 鎖定時段", expanded=False):
         off_date = st.date_input("選擇排休日期", date.today())
         is_all_day = st.checkbox("✅ 全天休假 (鎖定整天)")
         
-        # 動態取得當日可用時段
+        # 動態取得當日可用時段 (20分鐘一格)
         day_slots_for_off = get_time_slots(off_date)
         
     with col_off2:
@@ -181,10 +183,12 @@ html_cal += "</div>"
 st.markdown(html_cal, unsafe_allow_html=True)
 st.write("---")
 
-# === 單日詳細管理 (已預設為往後推 5 天) ===
-st.markdown("### 📝 近期預約管理 (未來 5 天)")
+# === 單日詳細管理 (往後推 5 天) ===
+st.markdown("### 📝 近期預約管理 (所選日期 + 往後 5 天)")
 selected_date = st.date_input("選擇起始日期", date.today())
-upcoming_dates = [selected_date + timedelta(days=i) for i in range(5)]
+
+# 🌟 核心：往後推 5 天，加上選擇當天，總共產生 6 天的資料陣列
+upcoming_dates = [selected_date + timedelta(days=i) for i in range(6)]
 
 any_booking = False
 
@@ -192,10 +196,15 @@ if df.empty: st.info("資料庫中目前尚無任何紀錄。")
 else:
     for target_date in upcoming_dates:
         day_df = df[df['Date'] == str(target_date)].sort_values(by=['Time'])
+        
+        # 該天沒資料就直接跳過，不佔版面
         if day_df.empty: continue
         
         any_booking = True
-        st.markdown(f"#### 🗓️ {target_date.strftime('%m/%d')} 的預約")
+        
+        # 加入一個優雅的日期分隔線
+        weekdays_ch = ["一", "二", "三", "四", "五", "六", "日"]
+        st.markdown(f'<div class="date-divider">🗓️ {target_date.strftime("%Y/%m/%d")} (週{weekdays_ch[target_date.weekday()]})</div>', unsafe_allow_html=True)
         
         for _, row in day_df.iterrows():
             real_row, uid = int(row['Sheet_Row']), int(row['Sheet_Row'])
@@ -285,4 +294,4 @@ else:
             st.write("---")
             
     if not any_booking:
-        st.info("未來 5 天目前沒有任何預約哦！")
+        st.info("所選日期與未來 5 天內目前沒有任何預約哦！")
