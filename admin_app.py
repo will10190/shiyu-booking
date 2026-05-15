@@ -27,6 +27,7 @@ st.markdown("""
     
     .action-panel { background-color: #FAF6F1; border-radius: 12px; padding: 16px 20px; margin-bottom: 16px; border: 1px solid #EAE0D5; }
     
+    /* 🌟 純網格月曆防禦版 CSS */
     .cal-container { width: 100%; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.05); background-color: white; border: 1px solid #F0EBE1; }
     .cal-header { display: grid; grid-template-columns: repeat(7, 1fr); background-color: #FAF6F1; border-bottom: 1px solid #F0EBE1; }
     .cal-header-cell { padding: 10px; text-align: center; color: #7A6353; font-weight: 600; font-size: 13px; border-right: 1px solid #F0EBE1; }
@@ -44,6 +45,7 @@ st.markdown("""
     .cal-scroll { flex-grow: 1; overflow-y: auto; scrollbar-width: none; }
     .cal-scroll::-webkit-scrollbar { display: none; }
     
+    /* 日期分隔線 */
     .date-divider { margin-top: 25px; margin-bottom: 10px; padding-bottom: 5px; border-bottom: 2px solid #EAE0D5; color: #7A6353; font-weight: bold; font-size: 18px; }
     </style>
 """, unsafe_allow_html=True)
@@ -94,7 +96,7 @@ except: pass
 if "active_panel" not in st.session_state: st.session_state.active_panel = None
 st.markdown("<div class='brand-title'>時嶼 管家後台</div>", unsafe_allow_html=True)
 
-# 🌟 核心：後台通用時間產生器 (自動判斷平假日、20分鐘為一格)
+# 🌟 核心保留：動態產生 20 分鐘時間表與平假日打烊時間
 def get_time_slots(target_date):
     is_weekend = getattr(target_date, 'weekday', lambda: 0)() >= 5
     end_hour = 19 if is_weekend else 16
@@ -114,10 +116,7 @@ with st.expander("🏖️ 新增排休 / 鎖定時段", expanded=False):
     with col_off1:
         off_date = st.date_input("選擇排休日期", date.today())
         is_all_day = st.checkbox("✅ 全天休假 (鎖定整天)")
-        
-        # 動態取得當日可用時段 (20分鐘一格)
         day_slots_for_off = get_time_slots(off_date)
-        
     with col_off2:
         off_times = []
         if not is_all_day: off_times = st.multiselect("選擇要鎖定的時段", options=day_slots_for_off)
@@ -132,7 +131,7 @@ with st.expander("🏖️ 新增排休 / 鎖定時段", expanded=False):
 
 st.write("---")
 
-# === 月曆總覽 ===
+# === 月曆總覽 (純網格 CSS Grid 版) ===
 st.markdown("### 📅 當月預約總覽")
 if "cal_year" not in st.session_state: st.session_state.cal_year = date.today().year
 if "cal_month" not in st.session_state: st.session_state.cal_month = date.today().month
@@ -183,11 +182,9 @@ html_cal += "</div>"
 st.markdown(html_cal, unsafe_allow_html=True)
 st.write("---")
 
-# === 單日詳細管理 (往後推 5 天) ===
+# === 近期預約管理 (所選日期 + 往後 5 天) ===
 st.markdown("### 📝 近期預約管理 (所選日期 + 往後 5 天)")
 selected_date = st.date_input("選擇起始日期", date.today())
-
-# 🌟 核心：往後推 5 天，加上選擇當天，總共產生 6 天的資料陣列
 upcoming_dates = [selected_date + timedelta(days=i) for i in range(6)]
 
 any_booking = False
@@ -196,13 +193,9 @@ if df.empty: st.info("資料庫中目前尚無任何紀錄。")
 else:
     for target_date in upcoming_dates:
         day_df = df[df['Date'] == str(target_date)].sort_values(by=['Time'])
-        
-        # 該天沒資料就直接跳過，不佔版面
         if day_df.empty: continue
         
         any_booking = True
-        
-        # 加入一個優雅的日期分隔線
         weekdays_ch = ["一", "二", "三", "四", "五", "六", "日"]
         st.markdown(f'<div class="date-divider">🗓️ {target_date.strftime("%Y/%m/%d")} (週{weekdays_ch[target_date.weekday()]})</div>', unsafe_allow_html=True)
         
@@ -257,11 +250,10 @@ else:
                     new_date = st.date_input("新日期", value=target_date, key=f"nd_{uid}")
                     svc_list = [s.strip() for s in str(row['Service']).split(",")]
                     tot_mins = sum(DURATION_MAP.get(s, 60) for s in svc_list)
+                    # 🌟 核心保留：每 20 分鐘為一格計算
                     s_needed = math.ceil(tot_mins / 20.0) if tot_mins > 0 else 1
                     
-                    # 動態抓取新日期的可用時段
                     day_time_slots = get_time_slots(new_date)
-                    
                     booked_new = []
                     for _, r_row in df[df['Date'] == str(new_date)].iterrows():
                         if int(r_row['Sheet_Row']) != real_row:
